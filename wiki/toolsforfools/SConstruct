@@ -1,0 +1,9 @@
+import os
+
+env = Environment(ENV = os.environ, tools=['xmlwiko','docbook'])
+
+env.XmlwikoDocbook('toolsforfools.xml','toolsforfools.wiki')
+env.XmlwikoMoin('toolsforfools.moin','toolsforfools.wiki')
+
+env.DocbookPdf('toolsforfools.pdf','toolsforfools.xml', xsl='pdf.xsl')
+env.DocbookHtml('toolsforfools.html','toolsforfools.xml', xsl='html.xsl')

@@ -1,0 +1,86 @@
+@title: Launchpad workflows for the SCons addon Tools
+@author: Dirk Baechle
+
+
+
+== Basic branching == branch
+
+
+== Getting a Launchpad login == login
+
+== Merging, contributing your patched code == merge
+
+The practice currently regarded best, is to branch the current mainline of a Tool, 
+add your changes, and then propose your branch for a merge via Launchpad.
+One of the Tool's admins should then merge the user's branch locally, resolve
+conflicts and finally pushes the result up again.
+
+== Setting up a project for a new tool == newproject
+
+The single steps are:
+
+* Login in with your user account
+* Go to the main page at [[launchpad.net]] and click on "Register a project"
+* Fill out the details for the first page. Name the project "scons-xyz", where
+"xyz" is the name of your tool.
+* Fill out the second page, and confirm "Create new project"
+{{* Now you can upload your current version of the tool by
+
+Code:
+bzr push lp:~user/scons-xyz/trunk
+
+which pushes it to the automatically created "trunk" series.
+}}
+
+== How to add a downloadable archive to your new project == archive
+
+Select the "trunk" series in the Project's main page
+
+Image: click_series_in_overview.png
+
+
+"Create a new milestone" and enter a version number
+
+Image: create_milestone.png
+
+Back in the overview page for the "trunk" series, create a new release
+
+Image: create_release.png
+
+Fill out the form for the release and confirm
+
+Image: enter_data_and_confirm.png
+
+
+Go back to the tool's page on Launchpad, and do a refresh in your browser. Then click on the
+"trunk" series link. You should see a page like this:
+
+Image: trunkseries1.png
+
+If this has not been done already, link the uploaded branch to this series. Clicking on "Link the branch to this series", select the "trunk" branch...
+
+Image: trunkseries2.png
+
+and get the addition of the series confirmed, after clicking 
+
+Image: trunkseries3.png
+
+Now you can add your TAR archive for download
+
+Image: add_file_for_download.png
+
+...
+
+Image: file_was_uploaded.png
+
+and the archive should get available for download.
+
+Image: release_downloadable.png
+
+== Links ==
+
+Some helpful links are
+
+*[[https://help.launchpad.net/Projects/Registering]]
+*[[https://help.launchpad.net/Projects/SeriesMilestonesReleases]]
+

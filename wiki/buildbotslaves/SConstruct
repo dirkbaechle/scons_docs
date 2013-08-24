@@ -1,0 +1,10 @@
+import os
+
+env = Environment(ENV = os.environ, tools=['xmlwiko','docbook'])
+
+env.XmlwikoDocbook('install_buildbot_windows.xml','install_buildbot_windows.wiki')
+env.XmlwikoMoin('install_buildbot_windows.moin','install_buildbot_windows.wiki')
+
+env.DocbookPdf('install_buildbot_windows.pdf','install_buildbot_windows.xml', xsl='pdf.xsl')
+env.DocbookHtml('install_buildbot_windows.html','install_buildbot_windows.xml', xsl='html.xsl')
+

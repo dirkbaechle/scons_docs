@@ -1,0 +1,12 @@
+env = Environment(tools=['docbook','xmlwiko'],DOCBOOK_FOP='/usr/local/bin/fop')
+xml = env.XmlwikoDocbook('docbook_dtd')
+
+#env.DocbookHtml('docbook_dtd','docbook_dtd',DOCBOOK_XSL='html.xsl')
+#env.DocbookPdf('docbook_dtd','docbook_dtd',DOCBOOK_XSL='pdf.xsl')
+
+env.DocbookHtml('docbook_dtd')
+env.DocbookPdf('docbook_dtd',DOCBOOK_XSL='pdf.xsl')
+
+#env.DocbookMan('a','docbook_dtd')
+#env.DocbookPdf('a','docbook_dtd')
+

@@ -1,0 +1,164 @@
+@title: The SCons Docbook DTD
+@author: Dirk Baechle
+
+== Purpose ==
+
+Based on Docbook v4.5, this DTD extends the standard by a few
+elements. They are used for automatic processing of SCons examples in the
+User's guide.
+
+== Identifiers ==
+
+The public and system identifiers of this DTD are:
+
+Code:
+"-//SCONS//DTD DocBook V4.5-Based extension V1.0//EN"
+"http://www.scons.org/dtd/scons.dtd"
+
+== Usage for SCons examples == usage
+
+An "SCons example" looks like this, and essentially describes a set of
+input files (program source files as well as SConscript files):
+
+Code:
+&lt;scons_example name="ex1">
+  &lt;file name="SConstruct" printme="1">
+    env = Environment()
+    env.Program('foo')
+  &lt;/file>
+  &lt;file name="foo.c">
+    int main() { printf("foo.c\n"); }
+  &lt;/file>
+&lt;/scons_example>
+
+The $$&lt;file>$$ contents within the $$&lt;scons_example>$$ tag will get written
+into a temporary directory whenever example output needs to be
+generated.  By default, the $$&lt;file>$$ contents are not inserted into text
+directly, unless you set the %%printme%% attribute on one or more files,
+in which case they will get inserted within a $$&lt;programlisting>$$ tag.
+This makes it easy to define the example at the appropriate
+point in the text where you intend to show the SConstruct file.
+
+Note that you should usually give the $$&lt;scons_example>$$ a %%name%%
+attribute so that you can refer to the example configuration later to
+run SCons and generate output.
+
+If you just want to show a file's contents without worry about running
+SCons, there's a shorter $$&lt;sconstruct>$$ tag:
+
+Code:
+&lt;sconstruct>
+  env = Environment()
+  env.Program('foo')
+&lt;/sconstruct>
+
+This is essentially equivalent to $$&lt;scons_example>&lt;file printme="1">$$,
+but it's more straightforward.
+
+SCons output is generated from the following sort of tag:
+
+Code:
+&lt;scons_output example="ex1" os="posix">
+  &lt;scons_output_command>scons -Q foo&lt;/scons_output_command>
+  &lt;scons_output_command>scons -Q foo&lt;/scons_output_command>
+&lt;/scons_output>
+
+You tell it which example to use with the %%example%% attribute, and then
+give it a list of $$&lt;scons_output_command>$$ tags to execute.  You can also
+supply an %%os%% tag, which specifies the type of operating system this
+example is intended to show; if you omit this, default value is %%posix%%.
+
+The generated SGML will show the command line (with the appropriate
+command-line prompt for the operating system), execute the command in
+a temporary directory with the example files, capture the standard
+output from SCons, and insert it into the text as appropriate.
+Error output gets passed through to your error output so you
+can see if there are any problems executing the command.
+
+== Additional elements == additional
+
+In the following, we shortly list the added elements (or tags) for reference.
+The screenshots were taken while preparing the DTD with a trial version of
+\\oXygen\\ 11.0.
+
+==+ Top-level == top
+The top-level tags $$scons_example$$, $$scons_example_file$$,
+$$sconstruct$$ and $$scons_output$$ are added to the $$para.class$$,
+alongside $$para$$ and $$simpara$$. This means that these tags can be
+inserted in any place, where a paragraph would be valid too.
+
+Image: scons_xsd1.png||scale="40"
+
+
+== sconstruct ==
+
+Image: scons_xsd6.png||scale="40"
+
+== scons_example ==
+
+Image: scons_xsd2.png||scale="40"
+
+An $$scons_example$$ can hold an arbitrary number of $$file$$ and
+$$directory$$ entries.
+
+==+ file/directory == file
+
+Image: scons_xsd3.png||scale="40"
+
+==- scons_example_file ==
+
+Image: scons_xsd4.png||scale="40"
+
+== scons_output/scons_output_command == scons_output
+
+Image: scons_xsd5.png||scale="40"
+
+
+==- Configurations for visual editing == visualconfig
+
+Configuration sets for two visual XML editors have been prepared.
+These are \\XmlMind\\ and \\Syntext Serna\\, both available in free versions that
+offer good WYSIWYG like editing. Other, more text-oriented solutions like
+Editix or Quanta may be used with success too (check
+[[http://wiki.docbook.org/topic/DocBookAuthoringTools the list of DocBook Authoring tools]]
+for an exhaustive list).
+
+Finally, I also found [[http://relation.to/Bloggers/HowToCreateAVisualDocBookEditorIn10Minutes Howto create a visual Docbook Editor in 10 Minutes]],
+a short description about how to use the VPE/JBOSS plugin of Eclipse to preview
+XML documents. But I did not follow this route any further...any volunteers out there?
+
+==+ XMLMind editor == xmlmind
+
+~Homepage||[[http://www.xmlmind.com/xmleditor]]
+~Tested version||Personal Edition 4.5.2
+
+This editor comes in a free version, containing all the basic features
+that you will need for editing Docbook documents. So don't hesitate to
+give it a try.
+
+Copy the contents of the %%xxe4%% folder in the archive to your
+user's XXE config directory. This is located at
+
+*%%$HOME/.xxe4/%% on Linux.
+*%%$HOME/Library/Application Support/XMLmind/XMLEditor4/%% on the Mac.
+*$$%APPDATA%\XMLmind\XMLEditor4\$$ on Windows 2000, XP, Vista.
+
+After a restart of the program, the SCons DTD is picked up automatically,
+and you can even select it when inserting new Books, Articles,... whatever.
+
+Image: colortest.png||scale="40"
+
+== Syntext Serna Free == serna
+
+~Homepage||[[http://www.syntext.com/downloads/serna-free/]]
+~Tested version||4.2.0
+
+This is a good alternative to the XmlMind editor, however its "Insert tag" philosophy
+did not convince me that much. But your mileage may vary...
+
+Copy the prepared %%scons%% addon folder to the %%plugins%%
+directory of your \\Serna\\ installation. Depending on where and how you installed the
+program, you might need root access for this step.
+
+Image: serna3.png||scale="40"
+

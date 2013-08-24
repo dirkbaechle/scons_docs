@@ -1,0 +1,8 @@
+env = Environment(tools=['xmlwiko'])
+
+env.XmlwikoDocbook('manual')
+
+env.Install('/home/dirk/workspace/sconsaddons/qt4/docs/','manual.xml')
+
+env.Alias('install','/home/dirk/workspace/sconsaddons/qt4/docs/')
+

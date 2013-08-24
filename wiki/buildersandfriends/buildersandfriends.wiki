@@ -1,0 +1,152 @@
+@title: Builders and Friends - Tips and tricks for writing your own SCons extensions
+@author: Dirk Baechle
+
+
+== When do you need an emitter? == emitter
+
+example HTMLhelp where final target != target
+
+{{Code:
+def __rename_file(target, source, env):
+    """
+    Rename/move a file.
+    """
+    os.rename(str(source[0]),str(target[0]))
+
+    return None
+
+def __build_libxml2(target, source, env):
+    """
+    General XSLT builder (HTML/FO), using the libxml2 module.
+    """
+    xsl_style = env.subst('$DOCBOOK_XSL')
+    styledoc = libxml2.parseFile(xsl_style)
+    style = libxslt.parseStylesheetDoc(styledoc)
+    doc = libxml2.parseFile(str(source[0]))
+    result = style.applyStylesheet(doc, None)
+    style.saveResultToFilename(str(target[0]), result, 0)
+    style.freeStylesheet()
+    doc.freeDoc()
+    result.freeDoc()
+
+    return None
+
+__rename_builder = SCons.Builder.Builder(
+        action = __rename_file)
+
+__libxml2_builder = SCons.Builder.Builder(
+        action = __build_libxml2,
+        src_suffix = '.xml')
+
+def DocbookHtml(env, target, source=None, *args, **kw):
+    """
+    A pseudo-Builder, providing a Docbook toolchain for HTML output.
+    """
+    # Init list of targets/sources
+    target, source = __extend_targets_sources(target, source)
+    
+    # Init XSL stylesheet
+    __init_xsl_stylesheet(kw, env, '$DOCBOOK_DEFAULT_XSL_HTML', ['html','docbook.xsl'])
+
+    # Create targets
+    result = []
+    for t,s in zip(target,source):
+        if t.find('.') < 0:
+            t += '.html'
+        reshtml = __libxml2_builder.__call__(env, t, s, **kw)
+        result.extend(__rename_builder.__call__(env, 'test.html', reshtml, **kw))
+    return result
+
+}}
+
+== Scanners ==
+
+When defining a scanner function with a 4th argument, you have to (!) set the variable
+argument to None, while creating the instance of your Scanner Object:
+
+
+{{Code:
+import SCons.Script
+
+def __xml_scan(node, env, path, arg):
+    """ Simple Docbook XML file scanner. """
+    from lxml import etree
+    
+    xsl_tree = etree.parse(os.path.join(scriptpath,'utils','xmldepend.xsl'))
+    doc = etree.parse(str(node))
+    result = doc.xslt(xsl_tree)
+
+    depfiles = [x.strip() for x in str(result).splitlines()]
+    return depfiles
+
+# Creating the instance of our XML dependency scanner
+docbook_xml_scanner = SCons.Script.Scanner(function = __xml_scan,
+                                           argument = None)
+}}
+
+
+== Things that do not work == nowork
+
+==+ Pseudo-builder with direct creation of target files == pseudo
+
+Code:
+Test
+
+
+Instead, you have to define a separate Action in the form of a
+Python function, and a builder that uses it.
+Then, call this builder within your pseudo-builder.
+
+{{Code:
+def __build_libxml2(target, source, env):
+    """
+    Build a HTML/FO file from XML with the libxml2 module.
+    """
+    xsl_style = env.subst('$DOCBOOK_XSL')
+    styledoc = libxml2.parseFile(xsl_style)
+    style = libxslt.parseStylesheetDoc(styledoc)
+    doc = libxml2.parseFile(str(source[0]))
+    html = style.applyStylesheet(doc, None)
+    style.saveResultToFilename(str(target[0]), html, 0)
+    style.freeStylesheet()
+    doc.freeDoc()
+    html.freeDoc()
+
+    return None
+
+__libxml2_builder = SCons.Builder.Builder(
+        action = __build_libxml2,
+        src_suffix = '.xml')
+
+def DocbookHtml(env, target, source=None, *args, **kw):
+    """
+    A pseudo-Builder, providing a Docbook toolchain for HTML output.
+    """
+    # Init list of targets/sources
+    if not SCons.Util.is_List(target):
+        target = [target]
+    if not source:
+        source = target[:]
+    elif not SCons.Util.is_List(source):
+        source = [source]
+    if len(target) < len(source):
+        target.extend(source[len(target):])
+    # Init XSL stylesheet
+    xsl_style = kw.get('xsl_stylesheet', env.subst('$DOCBOOK_STYLESHEET'))
+    if xsl_style == '':
+        xsl_style = os.path.join(scriptpath,db_xsl_folder,'html','docbook.xsl')
+    env['DOCBOOK_XSL'] = xsl_style
+    result = []
+    # Setup builder
+    __builder = __libxml2_builder
+    if not has_libxml2:
+        __builder = __xsltproc_builder
+    # Create targets
+    for t,s in zip(target,source):
+        if t.find('.') < 0:
+            t += '.html'
+        result.extend(__builder.__call__(env, t, s, **kw))
+
+    return result
+}}
+

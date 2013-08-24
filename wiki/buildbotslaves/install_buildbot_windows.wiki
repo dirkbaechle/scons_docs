@@ -1,0 +1,249 @@
+title: Installing a Buildbot slave
+author: Dirk Baechle
+
+By setting up a Buildbot slave and registering it with our
+master process at $$buildbot.scons.org$$ you can contribute
+to the SCons project a lot. We are always happy to hear from
+people that have a few spare machine cycles for our CI system.
+Having a good amount of diversity
+among the provided slave setups helps us to keep SCons cross-platform
+and functioning in general.
+
+It's not that complicated to get a Buildbot slave running. In
+the following I'll list the packages I had to install and the steps
+I performed to get a
+
+# Windows XP, 32bit, Home Edition and
+# a Fedora 17 Linux, 32bit, Desktop Edition
+
+going.
+Use them as an outline of what to do, and if things differ for your
+system feel free to complement the instructions where necessary.
+In general, apply common sense.
+
+== Setup Mercurial ==
+
+Since we use Mercurial for all the source control stuff,
+your Buildbot slave needs it too, for getting the latest revision
+of the default branch.
+
+That's why your first steps should be to ensure that you have $$hg$$
+installed and can call
+Mercurial directly in the command line (DOS prompt, terminal,
+shell, ...whatever). So download it from
+
+[[http://mercurial.selenic.com/wiki/Download]]
+
+and install it, if required. The command
+
+Code:
+> hg
+
+should give you a help text about the different options that $$hg$$ can be called with.
+Make sure that the $$bin$$ directory of $$hg$$ is added to your $$PATH$$ variable, such
+that you can execute the command from anywhere without specifying the full path.
+
+Also check your $$~/.hgrc$$ file, it should have a proper user defined and the
+$$purge$$ extension enabled. The file should look something like this:
+
+{{Code:
+[ui]
+user = John Doe &lt;john.doe@whoami.com>
+
+[extensions]
+hgext.purge=
+}}
+
+== Under Windows XP ==
+
+==+ Download and installation ==
+
+If you don't already have a Python version installed,
+download and install Python 2.7.x from:
+
+[[http://www.python.org/download]]
+
+The next package you'll need is $$pywin32$$.
+Download and install it from:
+
+[[http://sourceforge.net/projects/pywin32/files/pywin32]]
+
+Now, download the $$setuptools$$ from:
+
+[[http://pypi.python.org/pypi/setuptools#downloads]]
+
+and watch out for the correct Python version. It should match with the one you have installed in your system. You probably want the MSWindows installer ($$.exe$$) not the EGG!
+
+Install the $$setuptools$$ and update the $$PATH$$ such that $$easy_install.exe$$ is
+found on the commandline.
+
+Then download and install Twisted from:
+
+[[http://twistedmatrix.com/trac/wiki/Downloads]]
+
+Install the additionally required $$zope.interface$$ with:
+
+Code:
+> easy_install zope.interface
+
+This command should automatically download the matching EGG and install it.
+If this doesn't work as advertised, you can try one of the direct downloads which are available at [[http://pypi.python.org/pypi/zope.interface]].
+
+Finally, download $$buildbot-slave$$ from:
+
+[[http://code.google.com/p/buildbot/downloads/list]]
+
+Get the ZIP archive of the latest version ($$buildbot-slave*.zip$$), unzip it,
+and then install by changing into the extracted folder ($$buildbot-slave*$$) and
+executing:
+
+Code:
+> c:\Python26\python.exe setup.py install
+
+(Please, replace the path to Python with the version that you have installed.)
+
+== Getting registered ==
+
+Send an email to scons-dev@scons.org, signalling that you want to setup a Buildslave. Include
+some basic info about your system, like Windows vs Linux and the used Python version.
+After a short while, you get an answer with the builder name and password that your
+Buildslave should use to register and communicate with the server.
+
+== Starting the first time ==
+
+Add a new directory like
+
+Code:
+c:\buildbot
+
+, and under it
+
+Code:
+c:\buildbot\buildslave
+
+. Change to $$c:\buildbot\buildslave$$ and check whether you
+can call the buildslave script:
+
+Code:
+> c:\Python26\Scripts\buildslave.bat --version
+
+should give you the version numbers of Twisted and buildbot.
+Now create your buildslave account and local info files with:
+
+Code:
+> c:\python26\Scripts\buildslave.bat create-slave -r . buildbot.scons.org:9989 your_builder_name your_password
+
+Then edit the files $$info/admin$$ and $$info/host$$ accordingly and finally start the
+slave with:
+
+Code:
+> c:\Python26\Scripts\buildslave.bat start c:\buildbot\buildslave
+
+For setting the buildslave up as service, find more infos at:
+
+[[http://trac.buildbot.net/wiki/RunningBuildbotOnWindows]]
+
+==- Under Fedora ==
+
+==+ Installation ==
+
+First, I did a full Fedora install, additionally selecting some development packages:
+
+* development-tools, development-libs
+* java, java-development
+* kde-desktop, kde-software-development
+* xfce-desktop, xfce-software-development
+* x-software-development
+
+
+Then I installed the following packages, actually required to get the Buildslave going:
+
+* python, python-devel, python-setuptools
+* python-twisted
+* buildbot, buildbot-slave
+
+For installing the required zope.interface, I simply called:
+
+Code:
+> easy_install zope.interface
+
+Then, I installed the following tools:
+
+* gcc, gcc-g++, gcc-fortran
+* mercurial
+* sip, swing
+
+where only mercurial (hg) is really required. The others were added to simply cover more
+tests.
+For the same reason I also installed TeXlive 2012 via its $$install-tl$$ program.
+I had to install another dependency:
+
+* perl-digest-MD5
+
+since the installer is written in Perl.
+
+
+== Registering/Starting ==
+
+Registering and actually starting the Buildslave under Linux is very similar to the Windows
+description above. So I'll just quickly outline some of the commands, the rest should get
+clear from this.
+
+First, add a new user $$buildslave$$ (group: $$buildslave$$) to your system. Login as $$buildslave$$
+and create a $$buildbot/buildslave$$ folder in your home directory:
+
+Code:
+> mkdir -p ~/buildbot/buildslave
+
+Check that you can call the buildslave script:
+
+Code:
+> buildslave --version
+
+and get the version numbers of Twisted and buildbot printed out. Change into your build
+directory
+
+Code:
+> cd ~/buildbot/buildslave
+
+and init the buildslave account with
+
+Code:
+> buildslave create-slave -r . buildbot.scons.org:9989 your_builder_name your_password
+
+Then edit the files $$info/admin$$ and $$info/host$$ accordingly and finally start the
+slave with:
+
+Code:
+> buildslave start /home/buildslave/buildbot/buildslave
+
+== Reboot/virtualenv ==
+
+Quoting Bill Deegan:
+
+On linux I'd suggest creating a separate user just for the buildslave,
+and starting buildbot slave via a crontab entry %%@reboot%%
+
+Here's what I have on one of my machines;
+
+Code:
+@reboot /home/sconsbuildbot/slave/bbenv/bin/buildslave start /home/sconsbuildbot/slave
+
+
+For installing a buildbot slave on linux I use:
+
+{{Code:
+virtualenv --no-site-packages bbenv
+bbenv/bin/activate
+pip install buildbot-slave
+}}
+
+After it finishes:
+
+{{Code:
+mkdir slave
+cd slave
+$HOME/bbenv/bin/buildslave create-slave -r . buildbot.scons.org:9989 your_builder_name your_password
+}}
+
+
