@@ -1,0 +1,10 @@
+import os
+
+env = Environment(ENV = os.environ, tools=['xmlwiko','docbook'])
+
+env.XmlwikoDocbook('notslow.xml','notslow.wiki')
+env.XmlwikoMoin('notslow.moin','notslow.wiki')
+
+env.DocbookPdf('notslow.pdf','notslow.xml', xsl='pdf.xsl')
+env.DocbookHtml('notslow.html','notslow.xml', xsl='html.xsl')
+

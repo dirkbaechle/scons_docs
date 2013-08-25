@@ -1,0 +1,267 @@
+@title: Why SCons is not slow
+@author: Dirk Baechle
+
+Looking around on the Internet, a lot of places can be found where people complain about SCons being
+horrendously slow, up to the point that it's unusable (for them).
+
+One of the most prominent ones seems to be a series of blog articles by Eric Melski:
+
+* [[http://blog.melski.net/2011/05/23/why-is-scons-so-slow/]]
+* [[http://www.electric-cloud.com/blog/2010/03/08/how-scalable-is-scons/]]
+* [[http://www.electric-cloud.com/blog/2010/07/21/a-second-look-at-scons-performance/]]
+* [[http://www.electric-cloud.com/blog/2010/08/11/the-last-word-on-scons-performance/]]
+
+Another, often linked and cited, comparison that does make SCons look extremely bad is:
+
+* [[http://gamesfromwithin.com/the-quest-for-the-perfect-build-system]]
+* [[http://gamesfromwithin.com/the-quest-for-the-perfect-build-system-part-2]]
+* [[http://gamesfromwithin.com/bad-news-for-scons-fans]]
+
+Several users jump on the same train:
+
+* [[http://softwareswirl.blogspot.de/2009/08/benchmarking-build-systems.html]]
+
+Finally, there is the very detailed wonderbuild benchmark at:
+
+* [[http://www.retropaganda.info/~bohan/work/psycle/branches/bohan/wonderbuild/benchmarks/time.xml]]
+
+On the other hand, in our mailing lists we don't very often hear from desperate users that need help
+speeding up their builds.
+
+So what's true? Does SCons get slow on large builds? And exactly when does this happen
+and why?
+
+In order to possibly answer some of these questions, I started my own investigations.
+This meant running a lot of SCons builds under various conditions and recording and
+evaluating the results.
+Read on, to find out what I discovered...
+
+== Repositories ==
+
+All the results of the following discussion can be downloaded as hg repo from
+
+[[http://www.bitbucket.org/dirkbaechle/scons_testresults]]
+
+. In separate folders you can find the raw result data and the scripts that were
+used to run the examples. Look out for `README.rst` or `overview.rst` files, they contain
+some additional info about how things work and what the single subdirectories
+contain.
+
+Additionally, I created a separate SCons testsuite which is available at
+
+[[http://www.bitbucket.org/dirkbaechle/scons_testsuite]]
+
+. It comprises several real-life projects, control scripts, and the supporting "sconstest" package for
+running all the timings and profilings.
+
+A warning: Both repos are rather large, so be prepared for some download time!
+
+== Linear scaling ==
+
+This section presents results for SCons' "linear scaling" behaviour while running
+on a single core. With this I mean: "What happens when the number
+of source files gets doubled up in each step?"
+
+==+ Used machine ==
+
+For all the tests and speedup comparisons in this section, I used the following machine setup
+
+{{Code:
+Ubuntu Linux, 12.04.2 LTS
+2 * Intel(R) Core(TM)2 Duo CPU E8300@2.83GHz
+2GB RAM
+}}
+
+
+== The genscons.pl script ==
+
+This is the original script as used by Eric Melski in his comparison of SCons and make. I additionally downloaded the stable release
+of SCons v1.2.0 and installed it, just to be sure that I get as close to his setup as possible.
+
+
+The full set of results can be found in the ``scons120_vs_make`` folder of the ``scons_testresults`` repo.
+
+Ran a series of builds as "clean build" (from scratch), "update" and (for SCons only) as "implicit-deps-unchanged update"
+(with the command-line options `--max-drift=1 --implicit-deps-unchanged`).
+
+Project sizes ranged from up to C files
+
+{{TODO: 
+describe projects and add graphs for results
+}}
+
+== Discussion ==
+
+The measured times don't show a dramatic quadratic increase as claimed. Another thing is, that if a quadratic
+behaviour for the whole process can be seen, I'd expect at least one module or function to show O(n**2) behaviour.
+But looking at the graphs for the examples d and e I can't find any.
+
+{{TODO: 
+Insert graphs here
+}}
+
+So what's going on? My suspicion is, that in the original article by Eric Melski something went wrong. At least,
+the given examples and numbers appear to not be reproducible on a different machine (and way too high). A reason for this could be
+the line
+
+{{Code:
+env = Environment(ENV = os.environ)
+}}
+
+in the SConstructs created by the genscons.pl script. By pulling in the whole shell environment, the build
+is not only broken in the way that it now depends on external shell variables. It also puts an additional
+workload on the variable substitution that's used for creating all the build commands.
+
+{{TODO:
+what else did I find? make deps show quadratic behaviour too! prove and discuss!
+}}
+
+== Switching to a more recent SCons version ==
+
+A comparison of the ancient v1.2.0 with the recent v2.3.0 release (see the folder `scons_v230_vs_make` in the `scons_testresults`
+repo) didn't show any differences in runtime behaviour. So for the remaining tests, I decided
+to switch to a current revision from latest development.
+
+I picked revision `#0c9c8aff8f46` of the SCons trunk. This means we talk about the stable
+2.3.0 release, plus some additional patches towards 2.3.1 (right after replacing the documentation toolchain).
+
+
+== The generate_libs.py script ==
+
+This is the script that was used by Noel Llopis in his "Quest for Performance" series.
+I downloaded it from the website, and disabled all other competitors except SCons and make.
+
+Created four directories with the following settings:
+
+{{Code:
+python generate_libs.py small 50 100 15 5
+python generate_libs.py middle 100 100 15 5
+python generate_libs.py large 200 100 15 5
+python generate_libs.py large 280 100 15 5
+}}
+
+this means that in each step, we double the number of libraries to create. From 50 to 100 to 200, we get
+
+{{Code:
+small = 5000 CPP/H files each (total 15000)
+middle = 10000 CPP/H files each (total 30000)
+large = 20000 CPP/H files each (total 60000)
+vlarge = 28000 CPP/H files each (total 84000)
+}}
+
+== Results ==
+
+{{TODO:
+what did I find? show and discuss!
+}}
+
+== Wonderbuild ==
+
+Was used in the wonderbuild benchmark.
+
+Downloaded it, and ran SCons and make
+as the only competitors.
+
+== Parallel builds ==
+
+==+ Machines ==
+
+== Results ==
+
+== Discussion ==
+
+{{TODO:
+what did I find? show and discuss!
+}}
+
+==- Continued speed analysis ==
+
+So far, we have seen that SCons doesn't do that bad. Still the update times could be a little smaller, which raises the questions
+
+* For what is the overhead of time used in SCons?
+* Are there any places for improvement?
+
+. Searching the Internet and collecting OpenSource projects that used SCons as their build system, I compiled a small testsuite
+for timing and profiling.
+
+
+==+ Contestants ==
+
+List single archives
+
+== Testsuite ==
+
+Shortly describe what kind of tests were run and how the results were evaluated.
+
+== Results ==
+
+Display the results (lots of links to SVG/PNG images)
+
+== Discussion ==
+
+Interpret the results and give ideas for improvements
+Branches from 
+
+  [[http://www.bitbucket.org/dirkbaechle/scons_experimental]]
+
+First is: `speedup_envcache`
+Second: `speedup_action_fixext`
+
+{{TODO:
+what did I find? show and discuss!
+}}
+
+
+==- Advice ==
+
+==+ What the user can do ==
+
+* Avoid clean builds! Just do them once and then switch to incremental builds afterwards. SCons dependency and content detection is good enough
+to provide more stable builds than a make "clean build" can. Don't throw away all the information (file and command signatures) that SCons collects
+during the initial build from scratch.
+* If you know that no dependencies have changed, use the fast options `--max-drift=1 --implicit-deps-unchanged` for updates.
+* If you have a large project, but are currently working only on a part of it, e.g. a single library, specify the concrete path of your target, like
+{{Code:
+  scons libs/utils
+}}
+* For even smaller update times, use the interactive mode of SCons. After starting once with
+
+{{Code:
+  scons --interactive
+}}
+
+   the current SConscript files stay in memory (again, this requires you to be sure that no implicit dependencies will change) and you can edit
+   your source files, and then build your targets with
+
+{{Code:
+  scons >>> build libs/utils
+}}
+
+. In a simple test with the "e" project of the sconsbld benchmark, I measured the following times
+
+{{Code:
+  genscons.pl script (16500 C files, proj "e")
+
+  on command-line
+  update: 1:23.224 s
+  update for single lib d1_0: 0:16.377s
+
+  interactive mode
+  update: 64.0s
+  update for single lib d1_0: approx 1s!
+}}
+
+The trick here is that SCons dynamically expands the nodes and its childs in the dependency tree, but only when it needs to.
+By specifying a concrete target (picking a node from the build tree), you can cut down work for SCons a big deal...and get rewarded
+with shorter response times.
+
+== What the developers can do ==
+
+Talk about experiments:
+
+* Reduce the time needed for substing stuff
+* Either by caching global vars after the SConscript files have been read completely, or
+* by setting fixed extensions and a smaller number of default C file suffixes (Note: we could write a small "fast-cpp" Tool
+  for that.
+
+
