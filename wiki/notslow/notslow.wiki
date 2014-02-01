@@ -11,13 +11,13 @@ One of the most prominent ones seems to be a series of blog articles by Eric Mel
 * [[http://www.electric-cloud.com/blog/2010/07/21/a-second-look-at-scons-performance/]]
 * [[http://www.electric-cloud.com/blog/2010/08/11/the-last-word-on-scons-performance/]]
 
-Another, often linked and cited, comparison that does make SCons look extremely bad is:
+Another, often linked and cited, comparison that makes SCons look extremely bad is:
 
 * [[http://gamesfromwithin.com/the-quest-for-the-perfect-build-system]]
 * [[http://gamesfromwithin.com/the-quest-for-the-perfect-build-system-part-2]]
 * [[http://gamesfromwithin.com/bad-news-for-scons-fans]]
 
-Several users jump on the same train:
+Several users jump on the same train, e.g.:
 
 * [[http://softwareswirl.blogspot.de/2009/08/benchmarking-build-systems.html]]
 
@@ -34,16 +34,15 @@ and why?
 In order to possibly answer some of these questions, I started my own investigations.
 This meant running a lot of SCons builds under various conditions and recording and
 evaluating the results.
-Read on, to find out what I discovered...
 
 == Repositories ==
 
-All the results of the following discussion can be downloaded as hg repo from
+All the results of the following discussion can be downloaded as $$hg$$ (Mercurial) repo from
 
 [[http://www.bitbucket.org/dirkbaechle/scons_testresults]]
 
 . In separate folders you can find the raw result data and the scripts that were
-used to run the examples. Look out for `README.rst` or `overview.rst` files, they contain
+used to run the examples. Look out for $$README.rst$$ or $$overview.rst$$ files, they contain
 some additional info about how things work and what the single subdirectories
 contain.
 
@@ -51,7 +50,7 @@ Additionally, I created a separate SCons testsuite which is available at
 
 [[http://www.bitbucket.org/dirkbaechle/scons_testsuite]]
 
-. It comprises several real-life projects, control scripts, and the supporting "sconstest" package for
+. It comprises several real-life projects, control scripts, and the supporting %%sconstest%% package for
 running all the timings and profilings.
 
 A warning: Both repos are rather large, so be prepared for some download time!
@@ -66,43 +65,64 @@ of source files gets doubled up in each step?"
 
 For all the tests and speedup comparisons in this section, I used the following machine setup
 
-{{Code:
-Ubuntu Linux, 12.04.2 LTS
-2 * Intel(R) Core(TM)2 Duo CPU E8300@2.83GHz
-2GB RAM
-}}
-
+* 2 Intel(R) Core(TM)2 Duo CPU E8300  @ 2.83GHz
+* 2 GB RAM
+* Ubuntu Linux 12.04.02 LTS (x86-64)
+* make 3.81
+* gcc 4.6.3
+* python 2.7.3
 
 == The genscons.pl script ==
 
-This is the original script as used by Eric Melski in his comparison of SCons and make. I additionally downloaded the stable release
+This is the original script as used by Eric Melski in his comparison of SCons and make.
+I additionally downloaded the stable release
 of SCons v1.2.0 and installed it, just to be sure that I get as close to his setup as possible.
 
+The full set of results can be found in the %%scons120_vs_make%% folder of the %%scons_testresults%% repo.
 
-The full set of results can be found in the ``scons120_vs_make`` folder of the ``scons_testresults`` repo.
+For a better comparison, here is the original result data by Eric Melski first (as published via
+$$pastebin$$).
 
-Ran a series of builds as "clean build" (from scratch), "update" and (for SCons only) as "implicit-deps-unchanged update"
-(with the command-line options `--max-drift=1 --implicit-deps-unchanged`).
+Image: images/melski.png||**docbook scale="40"**
 
-Project sizes ranged from up to C files
 
-{{TODO: 
-describe projects and add graphs for results
-}}
+I ran my own series of builds as "clean build" (from scratch), "update" and as "implicit-deps-unchanged update"
+(for SCons only, with the command-line options $$--max-drift=1 --implicit-deps-unchanged$$).
+While doing so, the project sizes ranged from 2500 up to 16500 C files.
 
-== Discussion ==
+Image: images/scons120.png||**docbook scale="40"**
 
-The measured times don't show a dramatic quadratic increase as claimed. Another thing is, that if a quadratic
-behaviour for the whole process can be seen, I'd expect at least one module or function to show O(n**2) behaviour.
-But looking at the graphs for the examples d and e I can't find any.
+The measured times don't show a dramatic quadratic increase as claimed. You'll certainly
+notice that the X axis is scaled differently. That's because I couldn't reach any higher
+number of C files without my machine starting to swap memory. At the maximum of
+16500 C files, SCons required about 1GB of RAM for a clean build, and the update runs as
+well. The rest of my total 2GB was taken by the OS, which makes me wonder how Eric Melski
+was able to reach those high numbers of files. By letting the machine swap freely? This
+would explain the increase of build times, starting at about 20000 C files in his data.
 
-{{TODO: 
-Insert graphs here
-}}
+Another thing is, that if a quadratic behaviour for the whole process can be seen, I'd
+expect at least one module or function to show $$O(n**2)$$ behaviour or worse. I mean,
+if there were a design flaw to be found, it shouldn't affect the whole program/framework
+but only a part of it, like a module or a single function. This bug would then grow
+exponentially over the number of files, and drag the overall performance of SCons down.
 
-So what's going on? My suspicion is, that in the original article by Eric Melski something went wrong. At least,
-the given examples and numbers appear to not be reproducible on a different machine (and way too high). A reason for this could be
-the line
+So I did a full profiling run with $$cProfile.py$$ for the two project sizes %%d%% (8500 files) and
+%%e%% (16500 files). You'll find the complete results in the repo, with all the timings, memory consumption
+and $$pstats$$ files. Here are the profiling results for an update run:
+
+#{{TODO: add SVG files
+#Image: images/melski_update_d.svg
+#Image: images/melski_update_e.svg
+#}}
+
+
+which don't show any significant difference or increase for the percentage of runtime
+in each function.
+
+So what's going on? My suspicion is, that in the original article by Eric Melski something
+went wrong. At least, the given examples and numbers appear to not be reproducible on a
+different machine (and way too high).
+I also found the line
 
 {{Code:
 env = Environment(ENV = os.environ)
@@ -112,17 +132,18 @@ in the SConstructs created by the genscons.pl script. By pulling in the whole sh
 is not only broken in the way that it now depends on external shell variables. It also puts an additional
 workload on the variable substitution that's used for creating all the build commands.
 
-{{TODO:
-what else did I find? make deps show quadratic behaviour too! prove and discuss!
-}}
+This is definitely not the main culprit, but depending on how the Environment looked it could
+have had an additional impact. Remark: I corrected the offending line in the version of the
+script that I checked in to the $$scons_testresults$$ repo.
 
 == Switching to a more recent SCons version ==
 
-A comparison of the ancient v1.2.0 with the recent v2.3.0 release (see the folder `scons_v230_vs_make` in the `scons_testresults`
-repo) didn't show any differences in runtime behaviour. So for the remaining tests, I decided
+A comparison of the ancient v1.2.0 with the recent v2.3.0 release (see the folder
+%%scons230_vs_make/genscons%% in the $$scons_testresults$$
+repo) didn't show any large differences in runtime behaviour. So for the remaining tests, I decided
 to switch to a current revision from latest development.
 
-I picked revision `#0c9c8aff8f46` of the SCons trunk. This means we talk about the stable
+I picked revision %%#0c9c8aff8f46%% of the SCons trunk. This means we talk about the stable
 2.3.0 release, plus some additional patches towards 2.3.1 (right after replacing the documentation toolchain).
 
 
@@ -131,137 +152,314 @@ I picked revision `#0c9c8aff8f46` of the SCons trunk. This means we talk about t
 This is the script that was used by Noel Llopis in his "Quest for Performance" series.
 I downloaded it from the website, and disabled all other competitors except SCons and make.
 
-Created four directories with the following settings:
+Image: images/scons230_qperf.png||**docbook scale="40"**
 
-{{Code:
-python generate_libs.py small 50 100 15 5
-python generate_libs.py middle 100 100 15 5
-python generate_libs.py large 200 100 15 5
-python generate_libs.py large 280 100 15 5
-}}
-
-this means that in each step, we double the number of libraries to create. From 50 to 100 to 200, we get
-
-{{Code:
-small = 5000 CPP/H files each (total 15000)
-middle = 10000 CPP/H files each (total 30000)
-large = 20000 CPP/H files each (total 60000)
-vlarge = 28000 CPP/H files each (total 84000)
-}}
-
-== Results ==
-
-{{TODO:
-what did I find? show and discuss!
-}}
+The project sizes were 5000, 10000, 12500 and 15000 CPP files. All the results can be found
+in the $$scons230_vs_make/questfperf/run_original$$ folder.
 
 == Wonderbuild ==
 
-Was used in the wonderbuild benchmark.
+Then I ran the example script from the wonderbuild benchmark with the same numbers of source
+files.
 
-Downloaded it, and ran SCons and make
-as the only competitors.
+Image: images/scons230_wbuild.png||**docbook scale="40"**
 
-== Parallel builds ==
+Find the full set of results in the $$scons230_vs_make/wonderbuild/run_original$$ folder.
 
+== Patched sources ==
+
+As for the Melski series, both of these additional benchmarks show a proper linear scaling
+(I'm still investigating where the "hook" in the wonderbuild results for a clean build comes
+from). However, the differences between the times for make and SCons are rather large.
+
+The main reason for this is that the source files are actually empty, such that the
+compiler doesn't have anything to do. So the displayed times give a clue about the
+administrative overhead that each build system needs. But if I compile about 10000
+CPP files, I certainly don't expect build times of 2 or 3 minutes.
+
+The CPP and header sources in all the three benchmarks above look something like:
+
+{{Code:
+////////
+Header:
+////////
+
+#ifndef class_0_h_
+#define class_0_h_
+
+class class_0 {
+public:
+    class_0();
+    ~class_0();
+};
+#endif
+
+////////
+Source:
+////////
+
+#include "class_0.h"
+&lt;several other includes&gt;
+
+class_0::class_0() {}
+class_0::~class_0() {}
+
+}}
+
+I tried to get a more realistic comparison, by throwing in some functions that
+are actually doing stuff and use the STL to some extent:
+
+{{Code:
+////////
+Header:
+////////
+
+#ifndef class_0_h_
+#define class_0_h_
+
+#include &lt;string&gt;
+#include &lt;vector&gt;
+class class_0
+{
+public:
+    class_0();
+    ~class_0();
+    class_0(const class_0 &amp;elem);
+    class_0 &amp;operator=(const class_0 &amp;elem);
+
+    void addData(const std::string &amp;value);
+    void clear();
+private:
+    std::vector&lt;std::string&gt; data;
+};
+    
+#endif
+
+////////
+Source:
+////////
+
+#include "class_0.h"
+&lt;several other includes&gt;
+using namespace std;
+
+class_0::class_0()
+{}
+
+class_0::~class_0()
+{}
+
+class_0::class_0(const class_0 &amp;elem)
+{
+  data = elem.data;
+}
+
+class_0 &amp;class_0::operator=(const class_0 &amp;elem)
+{
+  if (&amp;elem == this)
+  {
+    return *this;
+  }
+
+  data = elem.data;
+
+  return *this;
+}
+
+void class_0::clear()
+{
+  data.clear();
+}
+
+void class_0::addData(const string &amp;value)
+{
+  data.push_back(value);
+}
+}}
+
+With these patched classes I ran another series for the "Quest for performance" and the
+"wonderbuild" benchmarks.
+
+Here are the results of the "Quest for performance" script:  
+
+Image: images/scons230_qperfp.png||**docbook scale="40"**
+
+and the "wonderbuild" setup:
+
+Image: images/scons230_wbuildp.png||**docbook scale="40"**
+
+. The full set of results can be found in the $$run_patched$$ folder
+of $$scons230_vs_make/questfperf$$ and $$scons230_vs_make/wonderbuild$$, respectively.
+
+The graphs show how make and SCons times converge when the build steps have some actual load.
+
+==- Parallel builds ==
+
+By a lucky coincidence, I could get access to two different multi-core machines for a week.
+So I seized the chance, wrote some scripts, and ran a full series of SCons/make builds with
+the parallel "-j" option enabled.
+My goal was to find out whether SCons has any scaling problems when building things in parallel.
+ 
 ==+ Machines ==
 
-== Results ==
+The first of the machines was a quad-core
 
-== Discussion ==
+* 4 Intel(R) Core(TM) i5 CPU 650 @ 3.20GHz
+* 4 GB RAM
+* SLES11 SP2, 32bit
+* Kernel 3.0.13-0.27-pae
 
-{{TODO:
-what did I find? show and discuss!
-}}
+and the other had eight cores
+
+* 8 Intel(R) Xeon(R) CPU X3460  @ 2.80GHz
+* 4 GB RAM
+* SLES10 SP3, 32bit
+* Kernel 2.6.16.60-0.54.5-bigsmp
+
+
+== Results == res_b
+
+You can find all results and speedup graphs in the $$scons230_vs_make/parallel$$ folder and its
+subdirectories. Please read the $$README/overview.rst$$ files for getting a better overview.
+
+In general the results show that the parallel speedups for SCons and make are on par, following
+are two example graphs. The first was run on the quad core machine and shows the "Quest for performance"
+results to the left, and the "wonderbuild" speedup to the right:
+
+Image: images/speedup_quad.png||**docbook scale="40"**
+
+I repeated the same experiment on the octa core machine, but let the number of threads
+range between 1 and 12 (again the "wonderbuild" graph is to the right):
+
+Image: images/speedup_octa.png||**docbook scale="40"**
+
+As an example of what's actually behind these graphs, here's the full array
+of single runs from $$-j1$$ to $$-j12$$ for the wonderbuild benchmark
+on the octa core system:
+
+Image: images/parallel_wbuild_1_12.png||**docbook scale="35"**
 
 ==- Continued speed analysis ==
 
-So far, we have seen that SCons doesn't do that bad. Still the update times could be a little smaller, which raises the questions
+So far, we've seen that SCons doesn't perform that bad and with that I mean "It seems to scale
+pretty well.". To me this indicates that our Taskmaster is doing a good job (despite common
+belief) and we don't have a more general problem in our source code where quadratic, or
+higher, complexity goes havoc. Still the update times could probably be a little smaller,
+which raises the questions
 
 * For what is the overhead of time used in SCons?
 * Are there any places for improvement?
 
-. Searching the Internet and collecting OpenSource projects that used SCons as their build system, I compiled a small testsuite
-for timing and profiling.
+I searched the Internet and collected some OpenSource projects that use SCons as their
+build system. Adding the benchmarks above, I compiled a small testsuite for timing
+and profiling different revisions. This made it easier to tell whether code changes
+actually improve the performance and in which parts.
 
+You can find the resulting little test framework at
 
-==+ Contestants ==
+[[http://www.bitbucket.org/dirkbaechle/scons_testsuite]]
 
-List single archives
+If you're interested enough to give it a go, please consult its $$README.rst$$ file in
+the top-level folder to understand how things work. 
 
-== Testsuite ==
+Disclaimer: It's currently not in a state of "running everywhere", but especially crafted for my very own Ubuntu
+Linux machine. So, if you try to start the examples on your own, be prepared to run into
+some pitfalls. You might have to adapt the controlling scripts, or even need
+to patch the software packages themselves...including the installation of
+special packages as prerequisites. 
 
-Shortly describe what kind of tests were run and how the results were evaluated.
+==+ Results == res_c
 
-== Results ==
+With this testsuite I profiled the %%#0c9c8aff8f46%% revision of SCons v2.3.0 mentioned above,
+in order to have some figures for reference.
+I won't go into full detail about all the different profiling and results graphs,
+just check the $$testresults/default$$ folder for yourself.
 
-Display the results (lots of links to SVG/PNG images)
+In general, the running time of SCons is distributed over a lot of different modules and
+functions, making it difficult to identify a single place that is suited for optimization.
+However, by cycling through patching the source code and rerunning the tests I found two
+places where a lot of time gets spent on the wrong things in my opinion.
+At least this is where we could spare a few cycles, especially for large projects with a
+lot of C/CPP files:
 
-== Discussion ==
-
-Interpret the results and give ideas for improvements
-Branches from 
-
-  [[http://www.bitbucket.org/dirkbaechle/scons_experimental]]
-
-First is: `speedup_envcache`
-Second: `speedup_action_fixext`
-
-{{TODO:
-what did I find? show and discuss!
-}}
-
-
-==- Advice ==
-
-==+ What the user can do ==
-
-* Avoid clean builds! Just do them once and then switch to incremental builds afterwards. SCons dependency and content detection is good enough
-to provide more stable builds than a make "clean build" can. Don't throw away all the information (file and command signatures) that SCons collects
-during the initial build from scratch.
-* If you know that no dependencies have changed, use the fast options `--max-drift=1 --implicit-deps-unchanged` for updates.
-* If you have a large project, but are currently working only on a part of it, e.g. a single library, specify the concrete path of your target, like
-{{Code:
-  scons libs/utils
-}}
-* For even smaller update times, use the interactive mode of SCons. After starting once with
+1.) The prefixes and suffixes for programs, objects and libraries in the default C/CPP
+builders are set as variables. For example the $$Program$$ Builder in
+$$src/engine/SCons/Tool/__init__.py$$, ll. 196, uses:
 
 {{Code:
-  scons --interactive
+prefix = '$PROGPREFIX',
+suffix = '$PROGSUFFIX',
+src_suffix = '$OBJSUFFIX',
 }}
 
-   the current SConscript files stay in memory (again, this requires you to be sure that no implicit dependencies will change) and you can edit
-   your source files, and then build your targets with
+This means that they have to get substituted every time a corresponding target gets built.
+
+2.) Somewhat related to this is the flexibility that we offer when specifiying
+C/CPP source files. By adding a large list of different scanners for file suffixes, 
 
 {{Code:
-  scons >>> build libs/utils
+CSuffixes = [".c", ".C", ".cxx", ".cpp", ".c++", ".cc",
+             ".h", ".H", ".hxx", ".hpp", ".hh",
+             ".F", ".fpp", ".FPP",
+             ".m", ".mm",
+             ".S", ".spp", ".SPP", ".sx"]
 }}
 
-. In a simple test with the "e" project of the sconsbld benchmark, I measured the following times
+, $$src/engine/SCons/Tool/__init__.py$$, ll. 64, we have to
+check against them for each source file we encounter. When a user knows that he only has
+CPP files to process, there is simply no need to check for FORTRAN...
+
+My ideas for improvements are:
+
+1.) Set suffixes to fixed strings for each OS in a special "fast C/CPP"-Tool.
+2.) In the same manner, restrict the number of possible source file suffixes
+to a customizable extension, like ".cpp". This could get wrapped in a Tool, too.
+3.) Speedup the subst() method, for example by caching intermediate results
+where applicable.
+
+I've started to work on patches that try to implement these ideas, they are contained in
+the two branches %%speedup_action_fixext%% and %%speedup_envcache%%
+of my personal $$scons_experimental$$ repository. So you can clone them with
 
 {{Code:
-  genscons.pl script (16500 C files, proj "e")
-
-  on command-line
-  update: 1:23.224 s
-  update for single lib d1_0: 0:16.377s
-
-  interactive mode
-  update: 64.0s
-  update for single lib d1_0: approx 1s!
+    hg clone http://bitbucket.org/dirkbaechle/scons_experimental -r speedup_action_fixext
 }}
 
-The trick here is that SCons dynamically expands the nodes and its childs in the dependency tree, but only when it needs to.
-By specifying a concrete target (picking a node from the build tree), you can cut down work for SCons a big deal...and get rewarded
-with shorter response times.
+and
 
-== What the developers can do ==
+{{Code:
+    hg clone http://bitbucket.org/dirkbaechle/scons_experimental -r speedup_envcache
+}}
 
-Talk about experiments:
+, respectively. By looking at the results of the profiling runs in the 
+$$scons_testresults/testsuite$$ folder under $$action_fixext$$ and $$envcache$$, especially
+the $$comparison.html$$ files, you can see how 10-30% of the
+update time can be shaved off in some cases. 
 
-* Reduce the time needed for substing stuff
-* Either by caching global vars after the SConscript files have been read completely, or
-* by setting fixed extensions and a smaller number of default C file suffixes (Note: we could write a small "fast-cpp" Tool
-  for that.
+Note, how these branches are experimental work and haven't been tested properly yet. They
+are bound to break certain types of builds, as the results show clearly. So don't use them
+for production work!
 
 
+Finally, a short word about memory usage, even though it's actually off-topic. During my
+experiments and all the different runs, I bumped into the memory barrier again and again.
+My 2GB system didn't offer enough RAM to run even larger projects, which is a pity.
+
+By inspecting the source code I came to the conclusion that it's probably not necessary
+to redesign the Node class and other closely related parts. The memory profilings (mem over
+runtime) show that we always collect memory until the very end. There never seem to be any
+objects freed and garbage-collected.
+I'm currently trying to find out why, and what could be done about it. My approach for
+an improvement of SCons' memory consumption is to not trim down the amount of memory per Node.
+We can actually make the Node class as big as we want, as long as we free the allocated
+resources (or the largest part of it) as soon as the Node was built... 
+
+A first branch following this idea can be found at:
+
+{{Code:
+    hg clone http://bitbucket.org/dirkbaechle/scons_experimental -r node_usage_analysis
+}}
+
+First results are very promising and show a reduction of up to 30% memory for clean and
+update builds, while not affecting speed. But again the warning: It's not ready for
+production work and under heavy development!

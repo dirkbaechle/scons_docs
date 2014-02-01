@@ -1,0 +1,12 @@
+import os
+
+prefix = 'howtocontribute'
+
+env = Environment(ENV = os.environ, tools=['xmlwiko','docbook'])
+
+env.XmlwikoDocbook('%s.xml' % prefix,'%s.wiki' % prefix)
+env.XmlwikoMoin('%s.moin' % prefix,'%s.wiki' % prefix)
+
+env.DocbookPdf('%s.pdf' % prefix,'%s.xml' % prefix, xsl='pdf.xsl')
+env.DocbookHtml('%s.html' % prefix,'%s.xml' % prefix, xsl='html.xsl')
+

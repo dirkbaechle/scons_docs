@@ -1,0 +1,6 @@
+env = Environment(tools=['docbook','xmlwiko'])
+xml = env.XmlwikoDocbook('wysiwyg')
+
+env.DocbookHtml('wysiwyg')
+env.DocbookPdf('wysiwyg',DOCBOOK_XSL='pdf.xsl')
+
